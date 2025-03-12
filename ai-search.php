@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI Search
  * Description: Replaces the default search with an intelligent search system.
- * Version: 1.2
+ * Version: 1.4
  * Author: samuelsilvapt
  * License: GPL2
  */
@@ -33,13 +33,14 @@ class AI_Search {
     /**
      * Threshold for similarity score.
      */
-    private $similarity_threshold = 0.5;
+    private $similarity_threshold;
 
     /**
      * Initialize the plugin.
      */
     private function __construct() {
         $this->api_key = get_option( 'ai_search_api_key', '' );
+        $this->similarity_threshold = get_option( 'ai_search_similarity_threshold', 0.5 );
         $this->register_hooks();
     }
 
@@ -63,6 +64,8 @@ class AI_Search {
         add_action( 'save_post', [ $this, 'generate_embedding' ] );
         add_filter( 'posts_request', [ $this, 'custom_search_query' ], 10, 2 );
         add_action( 'admin_menu', [ $this, 'register_settings_menu' ] );
+        add_action( 'admin_post_ai_search_generate_embeddings', [ $this, 'generate_selected_embeddings' ] );
+
     }
 
     /**
@@ -142,7 +145,6 @@ class AI_Search {
      * @return string Modified SQL query.
      */
     public function custom_search_query( $sql, $query ) {
-    
         if ( ! $query->is_search || is_admin() ) {
             return $sql;
         }
@@ -226,28 +228,113 @@ class AI_Search {
     }
 
     /**
+     * Generate embedding for selected custom post type.
+     * @return void
+     */
+    public function generate_selected_embeddings() {
+        if ( ! current_user_can( 'manage_options' ) || ! isset( $_POST['cpt'] ) ) {
+            wp_die( __( 'Unauthorized access', 'ai-search' ) );
+        }
+        
+        $cpt = sanitize_text_field( $_POST['cpt'] );
+        
+        $posts = get_posts([
+            'numberposts' => 50,
+            'post_type'   => $cpt,
+            'post_status' => 'publish',
+            'meta_query'  => [
+                [
+                    'key'     => '_ai_search_embedding',
+                    'compare' => 'NOT EXISTS'
+                ]
+            ]
+        ]);
+        
+        foreach ( $posts as $post ) {
+            $this->generate_embedding( $post->ID );
+        }
+        
+        wp_redirect( admin_url( 'options-general.php?page=ai-search&embeddings_generated=true&tab=embeddings' ) );
+        exit;
+    }
+
+    /**
      * Display settings page.
      */
+    /**
+     * Display settings page with tabs.
+     */
     public function settings_page() {
-        if ( isset( $_POST['api_key'] ) ) {
-            check_admin_referer( 'ai_search_save_settings' );
+        $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'general';
+        
+        echo '<div class="wrap">';
+        echo '<h1>AI Search Settings</h1>';
+        echo '<h2 class="nav-tab-wrapper">';
+        echo '<a href="?page=ai-search&tab=general" class="nav-tab ' . ( $active_tab == 'general' ? 'nav-tab-active' : '' ) . '">General Settings</a>';
+        echo '<a href="?page=ai-search&tab=embeddings" class="nav-tab ' . ( $active_tab == 'embeddings' ? 'nav-tab-active' : '' ) . '">Generate Embeddings</a>';
+        echo '</h2>';
 
+        if ( $active_tab == 'general' ) {
+            $this->general_settings_page();
+        } else {
+            $this->embeddings_settings_page();
+        }
+        
+        echo '</div>';
+    }
+
+
+
+    /**
+     * General settings tab.
+     */
+    private function general_settings_page() {
+        if ( isset( $_POST['api_key'], $_POST['similarity_threshold'] ) ) {
+            check_admin_referer( 'ai_search_save_settings' );
             update_option( 'ai_search_api_key', sanitize_text_field( wp_unslash( $_POST['api_key'] ) ) );
-            echo '<div class="updated"><p>API Key saved successfully!</p></div>';
+            update_option( 'ai_search_similarity_threshold', floatval( $_POST['similarity_threshold'] ) );
+            echo '<div class="updated"><p>Settings saved successfully!</p></div>';
         }
 
         $api_key = get_option( 'ai_search_api_key', '' );
-        echo '<div class="wrap">';
-        echo '<h1>AI Search Settings</h1>';
+        $similarity_threshold = get_option( 'ai_search_similarity_threshold', 0.5 );
+
         echo '<form method="post" action="">';
         wp_nonce_field( 'ai_search_save_settings' );
         echo '<label for="api_key">OpenAI API Key:</label>'; 
         echo '<input type="text" id="api_key" name="api_key" value="' . esc_attr( $api_key ) . '" style="width: 100%; max-width: 400px;" />';
         echo '<br/><br/>';
+        echo '<label for="similarity_threshold">Similarity Threshold (0-1):</label>';
+        echo '<input type="range" id="similarity_threshold" name="similarity_threshold" min="0" max="1" step="0.01" value="' . esc_attr( $similarity_threshold ) . '" oninput="this.nextElementSibling.value = this.value">';
+        echo '<output>' . esc_attr( $similarity_threshold ) . '</output>';
+        echo '<br/><br/>';
         echo '<input type="submit" class="button-primary" value="Save Settings" />';
         echo '</form>';
-        echo '</div>';
     }
+
+    /**
+     * Embeddings settings tab.
+     */
+    private function embeddings_settings_page() {
+        if ( isset( $_GET['embeddings_generated'] ) ) {
+            echo '<div class="updated"><p>Embeddings have been generated for selected posts!</p></div>';
+        }
+
+        $post_types = get_post_types( [ 'public' => true ], 'objects' );
+        echo '<h2>Generate Embeddings for Selected CPT</h2>';
+        echo '<p>Select a custom post type and click the button to generate embeddings for up to 50 posts that do not yet have them.</p>';
+        echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php?action=ai_search_generate_embeddings' ) ) . '">';
+        echo '<select name="cpt">';
+        foreach ( $post_types as $post_type ) {
+            echo '<option value="' . esc_attr( $post_type->name ) . '">' . esc_html( $post_type->label ) . '</option>';
+        }
+        echo '</select>';
+        echo '<br/><br/>';
+        echo '<input type="submit" class="button button-secondary" value="Generate Embeddings" />';
+        echo '</form>';
+    }
+
+
 }
 
 // Initialize the plugin.
