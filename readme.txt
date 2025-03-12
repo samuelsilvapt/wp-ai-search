@@ -2,7 +2,7 @@
 Contributors: samuelsilvapt  
 Tags: search, AI, OpenAI, WordPress  
 Tested up to: 6.7 
-Stable tag: 1.2
+Stable tag: 1.4
 Requires PHP: 8.0 
 License: GPLv2
 Replaces the default search with an intelligent search system.
@@ -59,6 +59,18 @@ https://platform.openai.com/docs/guides/completions
 https://platform.openai.com/docs/guides/embeddings
 
 == Changelog ==
+
+= 1.4 = 
+- **Settings UI Revamp**: Introduced **tabbed navigation** to separate "General Settings" and "Generate Embeddings" for better organization.
+- **Batch Embedding Generation**: Users can now trigger embedding generation **for up to 50 posts** at a time.
+- **Custom Post Type Selection**: A dropdown was added, allowing users to **choose which CPT** they want to generate embeddings for.
+- **Embedding Optimization**: Now only processes posts that **do not yet have embeddings** to **avoid redundant API calls** and **improve performance**.
+- **Security Enhancements**: Added **nonce verification** to protect settings updates.
+
+This update significantly **improves usability**, **optimizes performance**, and **gives users more control** over AI-powered search embeddings. 
+
+= 1.3 = 
+- **Similarity Threshold Control**: Added a **range input field** (0-1) in settings to allow users to adjust the similarity threshold dynamically.
 
 = 1.2 =
 - Cache Search embeddings, saved in transients for one day
