@@ -10,11 +10,12 @@
     ],
     "require-dev": {
         "squizlabs/php_codesniffer": "^3.12",
-        "wp-coding-standards/wpcs": "^3.1"
+        "wp-coding-standards/wpcs": "^3.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
     },
     "scripts": {
-        "lint": "vendor/bin/phpcs --standard=phpcs.xml",
-        "fix": "vendor/bin/phpcbf --standard=phpcs.xml"
+        "lint": "vendor/bin/phpcs --standard=phpcs.xml --colors ai-search.php",
+        "fix": "vendor/bin/phpcbf --standard=phpcs.xml --colors ai-search.php"
     },
     "config": {
         "allow-plugins": {
