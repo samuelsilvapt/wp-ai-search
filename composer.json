@@ -1,0 +1,25 @@
+{
+    "name": "samuelsilvapt/ai-search",
+    "description": "Replaces the default search with an intelligent search system.",
+    "type": "project",
+    "authors": [
+        {
+            "name": "samuelsilvapt",
+            "email": "hi@samuelsilva.pt"
+        }
+    ],
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.12",
+        "wp-coding-standards/wpcs": "^3.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+    },
+    "scripts": {
+        "lint": "vendor/bin/phpcs --standard=phpcs.xml --colors ai-search.php",
+        "fix": "vendor/bin/phpcbf --standard=phpcs.xml --colors ai-search.php"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}
