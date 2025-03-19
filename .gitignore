@@ -1,0 +1,9 @@
+# Ignore system files and temporary files
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+vendor/
+
+# Lock files
+composer.lock
